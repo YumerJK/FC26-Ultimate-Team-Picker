@@ -313,13 +313,13 @@
 
       <div class="detail-grid">
         <div class="d-box"><small>DİZİLİŞ</small><span id="dizilis">-</span></div>
-        <div class="d-box"><small>KİLİT OYUNCU</small><span id="kilit-oyuncu">-</span></div>
+        <div class="d-box"><small>PİYASA DEĞERİ</small><span id="piyasa-degeri">-</span></div>
       </div>
     </section>
   </main>
 
   <script>
-    const KEY_PLAYER_PLACEHOLDER = "GÜNCEL KADRODAN ÖNE ÇIKAN";
+   const MARKET_VALUE_PLACEHOLDER = "GÜNCEL PİYASA DEĞERİ";
     const FALLBACK_LOGO = "https://img.icons8.com/color/120/football2.png";
 
     function buildTeamBadge(teamName) {
@@ -362,8 +362,12 @@
       "METZ": ["FC Metz"],
       "FATİH KARAGÜMRÜK": ["Fatih Karagumruk"],
       "RİZESPOR": ["Çaykur Rizespor", "Caykur Rizespor"],
-      "BAŞAKŞEHİR": ["Istanbul Basaksehir"]
-    };
+    "BAŞAKŞEHİR": ["Istanbul Basaksehir"],
+      "MANCHESTER UNITED": ["Manchester Utd", "Man United"],
+      "MANCHESTER CITY": ["Man City"],
+      "INTER": ["Inter Milan"],
+      "MILAN": ["AC Milan"],
+      "ATLETICO MADRID": ["Atlético Madrid", "Atletico de Madrid"]    };
 
     function normalizeName(name = "") {
       return name
@@ -485,7 +489,7 @@
         hucum: Math.min(95, hucum),
         savunma: Math.min(92, savunma),
         dizilis: dizilisler[seed % dizilisler.length],
-        kilit: KEY_PLAYER_PLACEHOLDER,
+         kilit: MARKET_VALUE_PLACEHOLDER,
         logo: team.id ? `https://a.espncdn.com/i/teamlogos/soccer/500/${team.id}.png` : ""
       };
     }
@@ -545,6 +549,92 @@
 
       return null;
     }
+const marketValueCache = new Map();
+    let marketValuePropertyIdPromise = null;
+
+    async function getMarketValuePropertyId() {
+      if (marketValuePropertyIdPromise) return marketValuePropertyIdPromise;
+      marketValuePropertyIdPromise = (async () => {
+        try {
+          const res = await fetch(
+            "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=market%20value&language=en&type=property&format=json&limit=10&origin=*"
+          );
+          const data = await res.json();
+          const props = data?.search || [];
+          const exact = props.find((p) => (p.label || "").toLowerCase() === "market value");
+          return (exact || props[0])?.id || null;
+        } catch (_) {
+          return null;
+        }
+      })();
+      return marketValuePropertyIdPromise;
+    }
+
+    function formatCurrencyAmount(amountRaw) {
+      const amount = Number(amountRaw);
+      if (!Number.isFinite(amount)) return null;
+      return new Intl.NumberFormat("tr-TR", {
+        maximumFractionDigits: 1,
+        notation: "compact"
+      }).format(amount);
+    }
+
+    async function fetchMarketValueFromWikidata(teamName) {
+      const aliases = TEAM_ALIASES[teamName] || [];
+      const searchCandidates = [teamName, ...aliases, `${teamName} football club`, `${teamName} soccer club`];
+      const propertyId = await getMarketValuePropertyId();
+      if (!propertyId) return null;
+
+      for (const candidate of searchCandidates) {
+        try {
+          const searchRes = await fetch(
+            `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(candidate)}&language=en&format=json&limit=5&origin=*`
+          );
+          const searchData = await searchRes.json();
+          const entities = searchData?.search || [];
+
+          for (const entity of entities) {
+            const entityId = entity.id;
+            const entityRes = await fetch(
+              `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${entityId}&props=claims&format=json&origin=*`
+            );
+            const entityData = await entityRes.json();
+            const claims = entityData?.entities?.[entityId]?.claims || {};
+            const marketClaim = claims?.[propertyId]?.[0];
+            const rawAmount = marketClaim?.mainsnak?.datavalue?.value?.amount;
+            const unit = marketClaim?.mainsnak?.datavalue?.value?.unit || "";
+            const formatted = formatCurrencyAmount(rawAmount);
+            if (!formatted) continue;
+
+            const currency = unit.includes("Q4917") ? "USD" : "";
+            return currency ? `${formatted} ${currency}` : formatted;
+          }
+        } catch (_) {
+          // no-op: try next candidate
+        }
+      }
+
+      return null;
+    }
+
+    async function setTeamMarketValue(team, isFinalSelection) {
+      const fallback = team.kilit || MARKET_VALUE_PLACEHOLDER;
+      el.piyasaDegeri.textContent = fallback;
+
+      if (!isFinalSelection) return;
+      if (marketValueCache.has(team.ad)) {
+        const cached = marketValueCache.get(team.ad);
+        if (el.ad.textContent === team.ad) el.piyasaDegeri.textContent = cached;
+        return;
+      }
+
+      const liveMarketValue = await fetchMarketValueFromWikidata(team.ad);
+      if (liveMarketValue) {
+        marketValueCache.set(team.ad, liveMarketValue);
+        if (el.ad.textContent === team.ad) el.piyasaDegeri.textContent = liveMarketValue;
+      }
+    }
+
 
     async function setTeamLogo(team, isFinalSelection) {
       const safeFallback = team.logo || buildTeamBadge(team.ad) || FALLBACK_LOGO;
@@ -714,7 +804,7 @@
 
     const databaseSafe = database.map(team => ({
       ...team,
-      kilit: KEY_PLAYER_PLACEHOLDER,
+       kilit: MARKET_VALUE_PLACEHOLDER,
       logo: team.logo || buildTeamBadge(team.ad)
     }));
 
@@ -730,7 +820,7 @@
       barHuc: document.getElementById("bar-huc"),
       barSav: document.getElementById("bar-sav"),
       dizilis: document.getElementById("dizilis"),
-      kilit: document.getElementById("kilit-oyuncu"),
+    piyasaDegeri: document.getElementById("piyasa-degeri"),
       yildizlar: document.getElementById("yildizlar")
     };
 
@@ -796,7 +886,7 @@
       el.huc.textContent = team.hucum;
       el.sav.textContent = team.savunma;
       el.dizilis.textContent = team.dizilis;
-      el.kilit.textContent = team.kilit;
+    setTeamMarketValue(team, animateBars);
 
       const full = Math.floor(team.yildiz);
       const half = team.yildiz % 1 !== 0;
