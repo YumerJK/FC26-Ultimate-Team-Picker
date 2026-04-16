@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FC 26 | ULTIMATE PICKER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --neon: #00ff66; --dark: #020503; }
+        body { margin: 0; background: var(--dark); color: #fff; font-family: 'Rajdhani', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+
+        .bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .grid { position: absolute; width: 200%; height: 200%; top: -50%; left: -50%; background-image: linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px); background-size: 50px 50px; transform: rotateX(60deg); animation: move 12s linear infinite; }
+        @keyframes move { from { background-position: 0 0; } to { background-position: 0 50px; } }
+
+        .card { position: relative; width: min(380px, calc(100vw - 32px)); background: rgba(5, 10, 5, 0.98); border: 1px solid rgba(0, 255, 102, 0.3); padding: 30px; border-radius: 20px; box-shadow: 0 0 50px #000; }
+
+        .logo-frame {
+            position: absolute; top: -30px; right: -10px;
+            width: 100px; height: 100px; background: #000;
+            border: 2px solid var(--neon); border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 20px var(--neon); z-index: 5;
+        }
+        #takim-logo { width: 80%; height: 80%; object-fit: contain; }
+
+        .header-content { position: relative; z-index: 10; width: 70%; }
+        .stars { color: #ffd700; font-size: 16px; margin: 10px 0; }
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 24px; margin: 0; color: var(--neon); }
+
+        select { width: 100%; background: #000; color: #fff; border: 1px solid var(--neon); padding: 12px; margin: 20px 0; font-family: inherit; border-radius: 5px; cursor: pointer; }
+        .fire-btn { width: 100%; padding: 15px; background: var(--neon); color: #000; font-family: 'Orbitron', sans-serif; font-weight: bold; border: none; cursor: pointer; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%); transition: 0.3s; }
+        .fire-btn:disabled { opacity: 0.75; cursor: wait; }
+
+        .result { margin-top: 30px; border-top: 1px solid rgba(0,255,102,0.2); padding-top: 20px; }
+        .stat-bar { height: 6px; background: #111; border-radius: 3px; margin: 12px 0; position: relative; width: 85%; }
+        .fill { height: 100%; background: var(--neon); width: 0%; transition: 1s ease-out; box-shadow: 0 0 10px var(--neon); }
+        .val { position: absolute; right: -40px; top: -15px; color: var(--neon); font-weight: bold; }
+
+        .details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; }
+        .d-box { background: rgba(255,255,255,0.03); padding: 10px; border-left: 2px solid var(--neon); }
+        .d-box small { display: block; font-size: 9px; color: var(--neon); margin-bottom: 3px; }
+    </style>
+</head>
+<body>
+    <div class="bg"><div class="grid"></div></div>
+
+    <div class="card">
+        <div class="logo-frame">
+            <img id="takim-logo" src="https://img.icons8.com/color/120/football2.png" alt="Takım logosu">
+        </div>
+
+        <div class="header-content">
+            <div id="yildizlar" class="stars">⭐⭐⭐⭐⭐</div>
+            <h1>FC 26 <span style="color:#fff">PRO</span></h1>
+            <small style="opacity: 0.6;">SQUAD DATA: v2026.1</small>
+        </div>
+
+        <label for="lig" style="font-size:12px; opacity:.8">Lig filtresi</label>
+        <select id="lig">
+            <option value="Hepsi">TÜM DÜNYA</option>
+            <option value="Süper Lig">SÜPER LİG</option>
+            <option value="Premier League">PREMIER LEAGUE</option>
+            <option value="La Liga">LA LIGA</option>
+        </select>
+
+        <button id="sec-buton" class="fire-btn">TAKIMI BELİRLE</button>
+
+        <div class="result">
+            <h2 id="takim-adi" style="margin:0; font-size:26px; text-transform:uppercase;">BEKLENİYOR</h2>
+            <div style="margin-top:20px">
+                <small>ATTACK</small>
+                <div class="stat-bar"><div id="bar-huc" class="fill"></div><span id="val-huc" class="val">0</span></div>
+                <small>DEFENSE</small>
+                <div class="stat-bar"><div id="bar-sav" class="fill"></div><span id="val-sav" class="val">0</span></div>
+            </div>
+            <div class="details">
+                <div class="d-box"><small>STRATEJİ</small><span id="dizilis">-</span></div>
+                <div class="d-box"><small>YILDIZ OYUNCU</small><span id="kilit-oyuncu">-</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const database = [
+            { ad: "GALATASARAY", lig: "Süper Lig", yildiz: 5, hucum: 88, savunma: 82, dizilis: "4-4-2", kilit: "VICTOR OSIMHEN", logo: "https://a.espncdn.com/i/teamlogos/soccer/500/449.png" },
+            { ad: "FENERBAHÇE", lig: "Süper Lig", yildiz: 4.5, hucum: 85, savunma: 81, dizilis: "4-2-3-1", kilit: "ALLAN SAINT-MAXIMIN", logo: "https://a.espncdn.com/i/teamlogos/soccer/500/451.png" },
+            { ad: "BEŞİKTAŞ", lig: "Süper Lig", yildiz: 4.5, hucum: 83, savunma: 80, dizilis: "4-2-3-1", kilit: "CIRO IMMOBILE", logo: "https://a.espncdn.com/i/teamlogos/soccer/500/444.png" },
+            { ad: "REAL MADRID", lig: "La Liga", yildiz: 5, hucum: 96, savunma: 90, dizilis: "4-3-3", kilit: "KYLIAN MBAPPE", logo: "https://a.espncdn.com/i/teamlogos/soccer/500/86.png" },
+            { ad: "BARCELONA", lig: "La Liga", yildiz: 5, hucum: 93, savunma: 88, dizilis: "4-3-3", kilit: "LAMINE YAMAL", logo: "https://a.espncdn.com/i/teamlogos/soccer/500/83.png" },
+            { ad: "MAN CITY", lig: "Premier League", yildiz: 5, hucum: 95, savunma: 89, dizilis: "4-3-3", kilit: "ERLING HAALAND", logo: "https://a.espncdn.com/i/teamlogos/soccer/500/167.png" }
+        ];
+
+        const btn = document.getElementById("sec-buton");
+
+        btn.addEventListener("click", () => {
+            const filt = document.getElementById("lig").value;
+            const pool = database.filter(t => filt === "Hepsi" || t.lig === filt);
+
+            if (pool.length === 0) {
+                alert("Bu filtrede takım bulunamadı.");
+                return;
+            }
+
+            btn.disabled = true;
+            let i = 0;
+
+            const run = setInterval(() => {
+                const r = pool[Math.floor(Math.random() * pool.length)];
+                document.getElementById("takim-adi").innerText = r.ad;
+                document.getElementById("takim-logo").src = r.logo;
+                i++;
+
+                if (i > 15) {
+                    clearInterval(run);
+                    const final = pool[Math.floor(Math.random() * pool.length)];
+                    display(final);
+                    btn.disabled = false;
+                }
+            }, 80);
+        });
+
+        function display(t) {
+            document.getElementById("takim-adi").innerText = t.ad;
+            document.getElementById("takim-logo").src = t.logo;
+            document.getElementById("val-huc").innerText = t.hucum;
+            document.getElementById("val-sav").innerText = t.savunma;
+            document.getElementById("dizilis").innerText = t.dizilis;
+            document.getElementById("kilit-oyuncu").innerText = t.kilit;
+
+            let s = "";
+            for (let j = 0; j < Math.floor(t.yildiz); j++) s += "⭐";
+            if (t.yildiz % 1 !== 0) s += "⭐";
+            document.getElementById("yildizlar").innerText = s;
+
+            document.getElementById("bar-huc").style.width = "0%";
+            document.getElementById("bar-sav").style.width = "0%";
+            setTimeout(() => {
+                document.getElementById("bar-huc").style.width = t.hucum + "%";
+                document.getElementById("bar-sav").style.width = t.savunma + "%";
+            }, 100);
+        }
+    </script>
+</body>
+</html>
